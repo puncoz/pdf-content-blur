@@ -7,7 +7,7 @@
 </template>
 
 <script type="text/ecmascript-6">
-    import PdfEditor from "./PdfViewer/PdfEditor"
+    import PdfEditor from "../../../../common/js/components/PdfViewer/PdfEditor"
 
     export default {
         name: "PdfEditorWrapper",

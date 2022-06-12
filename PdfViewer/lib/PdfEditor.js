@@ -1,5 +1,6 @@
 "use strict"
 
+import JsPdf  from "jspdf/dist/jspdf.umd.min"
 import Canvas from "./Canvas"
 import Pdf    from "./Pdf"
 
@@ -20,7 +21,7 @@ class PdfEditor {
 
         this.pdf.loadFromUrl(pdfFileUrl).then((totalPages) => {
             this.totalPages = totalPages
-            this.renderPdf(1)
+            this.renderPdf(1, true).then()
         })
 
         this.bindEvents()
@@ -36,25 +37,34 @@ class PdfEditor {
 
     resizeEditor() {
         this.canvas.calculateCanvasSize()
-        this.renderPdf(this.currentPage, true)
+        this.renderPdf(this.currentPage).then()
     }
 
-    renderPdf(pageNumber, forceRender = false) {
+    async renderAllPages() {
+        for (let i = 1; i <= this.totalPages; i++) {
+            await this.renderPdf(i)
+        }
+    }
+
+    async renderPdf(pageNumber, forceRender = false) {
         if (!this.pdf) {
             return
         }
 
         this.preserveCurrentCanvas()
 
+        this.canvas.getRef().clear()
         this.currentPage = pageNumber
 
         if (!forceRender && this.canvases.has(pageNumber)) {
-            this.canvas.loadFromJson(this.canvases.get(pageNumber))
+            await this.canvas.loadFromJson(this.canvases.get(pageNumber))
 
             return
         }
 
-        this.pdf.renderPage(pageNumber, this.canvas.getRef(), this.canvas.width, this.canvas.height)
+        await this.pdf.renderPage(pageNumber, this.canvas.getRef(), this.canvas.width, this.canvas.height)
+
+        this.preserveCurrentCanvas()
     }
 
     preserveCurrentCanvas() {
@@ -70,20 +80,20 @@ class PdfEditor {
         this.unbindEvents()
     }
 
-    gotoPrevPage() {
+    async gotoPrevPage() {
         if (this.currentPage === 1) {
             return
         }
 
-        this.renderPdf(this.currentPage - 1)
+        await this.renderPdf(this.currentPage - 1)
     }
 
-    gotoNextPage() {
+    async gotoNextPage() {
         if (this.currentPage === this.totalPages) {
             return
         }
 
-        this.renderPdf(this.currentPage + 1)
+        await this.renderPdf(this.currentPage + 1)
     }
 
     deleteAll() {
@@ -94,8 +104,31 @@ class PdfEditor {
         this.canvas.removeSelected()
     }
 
-    export() {
-        console.log("export")
+    async export() {
+        const jsPdf = new JsPdf({
+            orientation: "p",
+            unit: "px",
+            format: "a4",
+        }).putTotalPages(this.totalPages.toString())
+
+        this.preserveCurrentCanvas()
+        const ratio = this.canvas.height / this.canvas.width
+
+        for (let i = 1; i <= this.totalPages; i++) {
+            await this.renderPdf(i)
+            if (i > 1) {
+                jsPdf.addPage()
+            }
+            jsPdf.setPage(i)
+
+            const width = jsPdf.internal.pageSize.getWidth()
+            const height = ratio * width
+            jsPdf.addImage(this.canvas.getRef().toDataURL({
+                format: "jpeg",
+            }), "JPEG", 0, 0, width, height)
+        }
+
+        jsPdf.save("test.pdf")
     }
 }
 

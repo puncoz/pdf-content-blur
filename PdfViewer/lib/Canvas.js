@@ -130,10 +130,14 @@ class Canvas {
         return JSON.stringify(this.ref)
     }
 
-    loadFromJson(canvasJson) {
-        this.ref.loadFromJSON(canvasJson, () => {
-            // making sure to render canvas at the end
-            this.ref.renderAll()
+    async loadFromJson(canvasJson) {
+        await new Promise(resolve => {
+            this.ref.loadFromJSON(canvasJson, () => {
+                // making sure to render canvas at the end
+                this.ref.renderAll()
+
+                resolve()
+            })
         })
     }
 

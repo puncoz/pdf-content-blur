@@ -23,26 +23,28 @@ class Pdf {
         return this.ref.numPages
     }
 
-    renderPage(pageNumber, canvas, canvasWidth, canvasHeight) {
-        this.ref.getPage(pageNumber).then(page => {
-            const viewport = page.getViewport({
-                scale: canvasWidth / page.view[2],
-                rotation: 0,
-            })
+    async renderPage(pageNumber, canvas, canvasWidth, canvasHeight) {
+        const page = await this.ref.getPage(pageNumber)
 
-            // Prepare canvas using PDF page dimensions
-            const tempCanvas = document.createElement("canvas")
-            const context = tempCanvas.getContext("2d")
-            tempCanvas.height = viewport.height
-            tempCanvas.width = viewport.width
+        const viewport = page.getViewport({
+            scale: canvasWidth / page.view[2],
+            rotation: 0,
+        })
 
-            // Render PDF page into canvas context
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport,
-                textContext: this.ref,
-            }
+        // Prepare canvas using PDF page dimensions
+        const tempCanvas = document.createElement("canvas")
+        const context = tempCanvas.getContext("2d")
+        tempCanvas.height = viewport.height
+        tempCanvas.width = viewport.width
 
+        // Render PDF page into canvas context
+        const renderContext = {
+            canvasContext: context,
+            viewport: viewport,
+            textContext: this.ref,
+        }
+
+        await new Promise((resolve, reject) => {
             page.render(renderContext).promise.then(() => {
                 const bg = tempCanvas.toDataURL("image/png")
 
@@ -50,6 +52,8 @@ class Pdf {
                     canvas.setHeight(img.height)
                     canvas.setWidth(img.width)
                     canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas))
+
+                    resolve()
                 })
             })
         })
